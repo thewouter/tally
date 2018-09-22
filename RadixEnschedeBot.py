@@ -270,7 +270,28 @@ def tally(split_text, chat, telegram_id, name, make_new_user=True):
             send_message("Unknown product: " + split_text[1], chat)
             return
     purchase = Purchase(user, product, amount, chat)
-    send_message("Tallied " + str(amount) + " " + product.name + " for " + user.name, chat)
+    # Get old score and new score
+    all_tallies = db.get_all_tallies(chat, user)
+    if product.name in all_tallies.keys():
+        old_score = all_tallies[product.name]
+        new_score = old_score + amount
+    else:
+        old_score = 0
+        new_score = amount
+    # If user remains on the right end, simple message:
+    if new_score < 0:
+        send_message("Tallied " + str(amount) + " " + product.name + " for " + user.name + " (current balance is " + new_score + " " + product + ").", chat)
+    # If user remains on the wrong end with a positive tally, add a simple notification & a personal message:
+    elif (old_score > 0) and (new_score > 0) and (amount > 0):
+        send_message("Tallied " + str(amount) + " " + product.name + " for " + user.name + " (current balance is " + new_score + " " + product + ").\n" + user.name + " has run out of " + product.name + " and is consuming another person's " +product.name + "!", chat)
+        send_message("Dear " + user.name + ", on this special occasion I would like to share with you a piece of wisdom our former queen shared with her son, the king:\n'Hee majesteit, ga eens bier halen!'", telegram_id)
+    # If a user remains on the wrong end with a negative tally, a more encouraging message:
+    elif (old_score > 0) and (new_score > 0) and (amount < 0):
+        send_message("Tallied " + str(amount) + " " + product.name + " for " + user.name + " (current balance is " + new_score + " " + product + ").\n" + user.name + ", thank you for adding some " + product.name + " to your stock. You did not add enough to return to Tally's good graces, though!", chat)
+    # Warn a user if their last item is tallied:
+    elif (new_score > 0) and (old_score < 0):
+        send_message("Tallied " + str(amount) + " " + product.name + " for " + user.name + " (current balance is " + new_score + " " + product + ").\n Better enjoy that " + product.name + ", " + user.name + "! You've depleted your stock!", chat)
+        send_message(user.name + ", your last " + product.name " was just tallied!", telegram_id)
     db.save_purchase(chat, purchase)
 
 
