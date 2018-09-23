@@ -16,6 +16,9 @@ class DBHelper:
         stmt = "CREATE TABLE IF NOT EXISTS chats (id INTEGER PRIMARY KEY)"
         self.conn.execute(stmt)
 
+    def get_save_location(self):
+        return self.save_location
+
     def add_chat(self, chat):
         self.conn.execute("INSERT INTO chats(id) VALUES (" + str(chat) + ")")
         self.conn.commit()

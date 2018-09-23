@@ -308,7 +308,8 @@ def handle_command(chat, text, telegram_id):
         '/add': add_product,
         '/all_history': show_all_history,
         '/history': show_history,
-        '/thanks': thank_user
+        '/thanks': thank_user,
+        '/update': update_tally
     }
     split_text = text.split()
     command = split_text[0].split("@")[0]
@@ -476,6 +477,15 @@ def thank_user(chat, split_text, telegram_id):
               " would like to thank you! \n" + user.name + \
               " has granted you a tally from his/her own pocket \nEnjoy, Tally"
     send_message(message, chat)
+
+
+def update_tally(chat, split_text, telegram_id):
+    if telegram_id != ADMIN:
+        send_message("🖕🖕🖕🖕🖕🖕", chat)
+        return
+    f = open(db.get_save_location() + "update_tally", "w+")
+    send_message("I will update shortly..", chat)
+    f.close()
 
 
 if __name__ == '__main__':
