@@ -484,7 +484,7 @@ def update_tally(chat, split_text, telegram_id):
         send_message("🖕🖕🖕🖕🖕🖕", chat)
         return
     f = open(db.get_save_location() + "update_tally", "w+")
-    send_message("I will update shortly...", chat)
+    send_message("I will update shortly....", chat)
     f.close()
     a= 1/0
 
