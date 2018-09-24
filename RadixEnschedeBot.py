@@ -4,6 +4,8 @@ import json
 import requests
 import urllib
 import random
+import time
+import traceback
 
 from dbhelper import DBHelper
 from user import User
@@ -12,10 +14,11 @@ from product import Product
 from NumericStringParser import NumericStringParser
 from pprint import pprint
 from dateutil.parser import parse
+from daemon import runner
 
 
 class RadixEnschedeBot:
-    db = DBHelper()
+    db = None
 
     TOKEN = "520500213:AAGkIMSBHc69uaC8SjfVlov2FQ6Saxt3rO0"
     URL = "https://api.telegram.org/bot{}/".format(TOKEN)
@@ -70,7 +73,15 @@ class RadixEnschedeBot:
     Honestly, we wouldn't be surprised if Tally would get Korsakoff, or have some troubles with (temporary) black-outs. Let alone that he stays alive.
     
     - Wouter (tally@woutervanharten.nl)"""
-    
+
+    def __init__(self):
+        self.stdin_path = '/dev/null'
+        self.stdout_path = '/home/wouter/tally_out'
+        self.stderr_path = '/home/wouter/tally_err'
+        self.pidfile_path =  '/tmp/tally.pid'
+        self.pidfile_timeout = 5
+        self.db = DBHelper()
+
     def get_url(self, url):
         response = requests.get(url)
         content = response.content.decode("utf8")
@@ -107,47 +118,8 @@ class RadixEnschedeBot:
         if reply_markup:
             url += "&reply_markup={}".format(reply_markup)
         self.get_url(url)
-    
-    def test2(self):
-        self.db.setup(-294368505)
-        self.db.save_user(-294368505, User("a", 1))
-        self.db.save_user(-294368505, User("b", 2))
-        self.db.save_user(-294368505, User("c", 3))
-        self.db.save_user(-294368505, User("d", 4))
-        self.db.save_user(-294368505, User("e", 5))
-        self.db.save_user(-294368505, User("f", 6))
-        self.db.save_product(-294368505, Product("aa"))
-        self.db.save_product(-294368505, Product("bb"))
-        self.db.save_product(-294368505, Product("cc"))
-        u1 = self.db.get_user_by_name(-294368505, "a")
-        u2 = self.db.get_user_by_name(-294368505, "b")
-        u3 = self.db.get_user_by_name(-294368505, "c")
-        u4 = self.db.get_user_by_name(-294368505, "d")
-        u5 = self.db.get_user_by_name(-294368505, "e")
-        u6 = self.db.get_user_by_name(-294368505, "f")
-        u = [u1, u2, u3, u4, u5, u6]
-        p1 = self.db.get_product_by_name(-294368505, "aa")
-        p2 = self.db.get_product_by_name(-294368505, "bb")
-        p3 = self.db.get_product_by_name(-294368505, "cc")
-        p = [p1, p2, p3]
-        for i in range(1, 10):
-            self.db.save_purchase(-294368505, Purchase(random.choice(u), random.choice(p), random.randint(1, 9), -294368505))
-    
-        pprint(vars(self.db.get_user(-294368505, 1)))
-        message = "=== Tallies ===\n"
-        totals = self.db.get_user_by_telegram_id(-294368505, 2).get_total_per_product(-294368505)
-        for key, value in totals.items():
-            message += key + ": " + str(value) + "\n"
-        print(message)
-        return
-    
-    def test(self):
-        nsp = NumericStringParser()
-        print(int(nsp.eval('7/2')))
-    
-    def main(self):
-        # test2()
-        # return
+
+    def run(self):
         last_update_id = None
         while True:
             updates = self.get_updates(last_update_id)
@@ -167,6 +139,7 @@ class RadixEnschedeBot:
     
             except Exception as e:
                 print(e)
+                traceback.print_stack()
                 print(update)
                 print("")
     
@@ -194,7 +167,6 @@ class RadixEnschedeBot:
             self.personal_message(chat, text, telegram_id, name)
             return
         # Check if chat allowed
-    
         if not self.db.check_chat(chat):
             self.send_message("Ask Wouter van Harten (+31)6 833 24 277 to whitelist <" + str(chat) + ">", chat)
             self.send_message("Activity from unknown chat <" + str(chat) + ">, maybe you can whitelist it with '/add_chat " + str(chat) + "' ?", self.ADMIN)
@@ -202,7 +174,6 @@ class RadixEnschedeBot:
     
         # Build/Check chat database
         self.db.setup(chat)
-    
         # Check for STFU
         if text[0] == ".":
             return
@@ -218,7 +189,7 @@ class RadixEnschedeBot:
             int(nsp.eval(split_text[0]))
             self.tally(split_text, chat, telegram_id, name)
             return
-        except Exception as e:
+        except Exception:
             pass
     
         # Try for username
@@ -317,7 +288,7 @@ class RadixEnschedeBot:
         self.send_message(message, chat)
     
     def show_products(self, chat, split_text, telegram_id):
-        products = self.db.get_all_products(chat)
+        products = self.db.get_all_products(chat, False)
         message = "=== PRODUCTS ===\n"
         for product in products:
             message += product.name + "\n"
@@ -432,5 +403,6 @@ class RadixEnschedeBot:
 
 
 if __name__ == '__main__':
-    tally = RadixEnschedeBot();
-    tally.main()
+    tally = RadixEnschedeBot()
+    daemon_runner = runner.DaemonRunner(tally)
+    daemon_runner.do_action()
