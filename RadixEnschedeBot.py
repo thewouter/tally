@@ -86,6 +86,8 @@ class RadixEnschedeBot:
             data = json.load(data_file)
         self.ADMIN = data['ADMIN']
         self.TOKEN = data['TOKEN']
+        self.URL = "https://api.telegram.org/bot{}/".format(self.TOKEN)
+
 
     def get_url(self, url):
         response = requests.get(url)
@@ -103,7 +105,7 @@ class RadixEnschedeBot:
             url += "&offset={}".format(offset)
         js = self.get_json_from_url(url)
         return js
-    
+
     def get_last_chat_id_and_text(self, updates):
         num_updates = len(updates["result"])
         last_update = num_updates - 1
