@@ -5,6 +5,7 @@ import requests
 import urllib
 import random
 import time
+import json
 import traceback
 
 from dbhelper import DBHelper
@@ -20,9 +21,9 @@ from daemon import runner
 class RadixEnschedeBot:
     db = None
 
-    TOKEN = "520500213:AAGkIMSBHc69uaC8SjfVlov2FQ6Saxt3rO0"
+    TOKEN = ""
     URL = "https://api.telegram.org/bot{}/".format(TOKEN)
-    ADMIN = 510984003
+    ADMIN = 0
 
     help_text = """
     === Basic commands ===
@@ -81,6 +82,10 @@ class RadixEnschedeBot:
         self.pidfile_path =  '/tmp/tally.pid'
         self.pidfile_timeout = 5
         self.db = DBHelper()
+        with open("/data/RadixEnschedeBot/config.json", "r") as data_file:
+            data = json.load(data_file)
+        self.ADMIN = data['ADMIN']
+        self.TOKEN = data['TOKEN']
 
     def get_url(self, url):
         response = requests.get(url)
