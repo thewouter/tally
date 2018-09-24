@@ -437,7 +437,7 @@ class RadixEnschedeBot:
             self.send_message("🖕🖕🖕🖕🖕🖕", chat)
             return
         f = open(self.db.get_save_location() + "update_tally", "w+")
-        self.send_message("I will update shortly....", chat)
+        self.send_message("I will update shortly..", chat)
         f.close()
 
 
