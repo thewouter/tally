@@ -238,7 +238,7 @@ class RadixEnschedeBot:
             old_score = 0
             new_score = amount
         # If user remains on the right end, simple message:
-        if new_score <= 0:
+        if new_score < 0:
             self.send_message("Tallied " + str(
                 amount) + " " + product.name + " for " + user.name + " (current balance is " + str(new_score) + " " + product.name + ").",
                          chat)
