@@ -20,11 +20,16 @@ class DBHelper:
         return self.save_location
 
     def add_chat(self, chat):
-        self.conn.execute("INSERT INTO chats(id) VALUES (" + str(chat) + ")")
-        self.conn.commit()
+        dbname = self.save_location + "tally.sqlite"
+        conn = sqlite3.connect(dbname)
+        conn.execute("INSERT INTO chats(id) VALUES (" + str(chat) + ")")
+        conn.commit()
 
     def check_chat(self, chat):
-        return len([x for x in self.conn.execute("SELECT id FROM chats WHERE id = " + str(chat))]) > 0
+        dbname = self.save_location + "tally.sqlite"
+        conn = sqlite3.connect(dbname)
+        a = conn.execute("SELECT id FROM chats WHERE id = '" + str(chat) + "';")
+        return len([x for x in a]) > 0
 
     def setup(self, chat):
         dbname = self.save_location + str(chat) + ".sqlite"
@@ -101,14 +106,14 @@ class DBHelper:
         conn.execute(stmt)
         conn.commit()
 
-    def get_all_products(self, chat):
+    def get_all_products(self, chat, recursive=True):
         dbname = self.save_location + str(chat) + ".sqlite"
         conn = sqlite3.connect(dbname)
         stmt = "SELECT id FROM product"
         result = [x for x in conn.execute(stmt)]
         products = []
         for p in result:
-            products.append(self.get_product(chat, p[0]))
+            products.append(self.get_product(chat, p[0], recursive))
         return products
 
     def get_product(self, chat, product_id, recursive=True):
