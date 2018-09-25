@@ -253,9 +253,9 @@ class RadixEnschedeBot:
                          chat)
             # Every fourth product or tally of at least 4 products, remind the user personally
             if (new_score % 4 == 0):
-                self.snark(telegram_id, user.name, new_score, product.name)
+                self.snark(user, new_score, product.name)
             elif amount > 3:
-                self.snark(telegram_id, user.name, new_score, product.name)
+                self.snark(user, new_score, product.name)
         # If a user remains on the wrong end with a negative tally, a more encouraging message:
         elif (old_score >= 0) and (new_score > 0) and (amount < 0):
             self.send_message("Tallied " + str(
