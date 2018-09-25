@@ -261,6 +261,11 @@ class RadixEnschedeBot:
             self.send_message("Tallied " + str(
                 amount) + " " + product.name + " for " + user.name + " (current balance is " + str(new_score) + " " + product.name + ").\n" + user.name + ", thank you for adding some " + product.name + " to your stock. You did not add enough to return to Tally's good graces, though!",
                          chat)
+        # Notify those who add exactly enough:
+        elif (old_score >= 0) and (new_score == 0) and (amount < 0):
+            self.send_message("Tallied " + str(
+                amount) + " " + product.name + " for " + user.name + " (current balance is " + str(new_score) + " " + product.name + ").\n" + user.name + ", thank you for adding some " + product.name + " to your stock. Tally likes those who do their bookkeeping to the letter!",
+                         chat)
         # Warn a user if their last item is tallied:
         elif (new_score >= 0) and (old_score < 0):
             self.send_message("Tallied " + str(
