@@ -3,9 +3,7 @@
 import json
 import requests
 import urllib
-import random
-import time
-import json
+from random import randrange as randint
 import traceback
 
 from dbhelper import DBHelper
@@ -13,7 +11,6 @@ from user import User
 from purchase import Purchase
 from product import Product
 from NumericStringParser import NumericStringParser
-from pprint import pprint
 from dateutil.parser import parse
 from daemon import runner
 
@@ -254,9 +251,11 @@ class RadixEnschedeBot:
             self.send_message("Tallied " + str(
                 amount) + " " + product.name + " for " + user.name + " (current balance is " + str(new_score) + " " + product.name + ").\n" + user.name + " has run out of " + product.name + " and is consuming another person's " + product.name + "!",
                          chat)
-            self.send_message(
-                "Dear " + user.name + ", on this special occasion I would like to share with you a piece of wisdom our former queen shared with her son, the king:\n'Hee majesteit, ga eens bier halen!'",
-                telegram_id)
+            # Every fourth product or tally of at least 4 products, remind the user personally
+            if (new_score % 4 == 0):
+                self.snark(telegram_id, user.name, new_score, product.name)
+            elif amount > 3:
+                self.snark(telegram_id, user.name, new_score, product.name)
         # If a user remains on the wrong end with a negative tally, a more encouraging message:
         elif (old_score >= 0) and (new_score > 0) and (amount < 0):
             self.send_message("Tallied " + str(
@@ -269,6 +268,31 @@ class RadixEnschedeBot:
                          chat)
             self.send_message(user.name + ", your last " + product.name + " was just tallied!", telegram_id)
         self.db.save_purchase(chat, purchase)
+        return
+    
+    def snark(self, user, new_score, productname):
+        # Unpack input
+        telegram_id, username = user.telegram_idd, user.name
+        # Messages
+        messages = ["Beste {0!s}, ter ere van deze speciale gelegenheid wil ik graag iets van de wijsheid van onze voormalige koningin met je delen:\n'Hee majesteit, ga eens {1!s} halen!'".format(username, productname),
+                    "Beste {0!s}, wat advies: {1!s} {2!s} schuld is {1!s} {2!s} schuld teveel!".format(username, new_score, productname),
+                    "Beste {0!s}, wist je dat Albert Heijn XL tot 22:00 open is en ze daar {2!s} hebben?".format(username, new_score, productname),
+                    "Beste {0!s}, voor jou is het geen {2!s}tijd, maar supermarkttijd!".format(username, new_score, productname),
+                    "Je creëert nu een {2!s}probleem, en nee dat is geen poar neem".format(username, new_score, productname),
+                    "2 woorden, {3!s} letters: {2!s} halen!".format(username, new_score, productname, len(productname)+5)]
+        # Random integer
+        i = randint(0, len(messages))
+        message = messages[i]
+        # Alexcheck
+        if (new_score > 19):
+            extra_message = "\n\nOverweeg alsjeblieft het volgende zelfhulp nummer te bellen: Alex bierservice 053-4338460"
+            message += extra_message
+        else:
+            extra_message = "\n\nRaadpleeg je agenda en https://www.biernet.nl/bier/aanbiedingen om dit probleem op te lossen."
+            message += extra_message
+        # Send random message
+        self.send_message(message, telegram_id)
+        return
     
     def handle_command(self, chat, text, telegram_id):
         switcher = {
