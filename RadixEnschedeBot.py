@@ -269,7 +269,7 @@ class RadixEnschedeBot:
     
     def snark(self, user, new_score, product):
         # Unpack input
-        product = product.name
+        productname = product.name
         telegram_id, username = user.telegram_id, user.name
         # Messages
         messages = ["Beste {0!s}, ter ere van deze speciale gelegenheid wil ik graag iets van de wijsheid van onze voormalige koningin met je delen:\n'Hee majesteit, ga eens {1!s} halen!'".format(username, productname),
