@@ -241,42 +241,35 @@ class RadixEnschedeBot:
         else:
             old_score = 0
             new_score = amount
-        # If user remains on the right end, simple message:
-        if new_score < 0:
-            self.send_message("Tallied " + str(
-                amount) + " " + product.name + " for " + user.name + " (current balance is " + str(new_score) + " " + product.name + ").",
-                         chat)
-        # If user remains on the wrong end with a positive tally, add a simple notification & a personal message:
-        elif (old_score >= 0) and (new_score > 0) and (amount > 0):
-            self.send_message("Tallied " + str(
-                amount) + " " + product.name + " for " + user.name + " (current balance is " + str(new_score) + " " + product.name + ").\n" + user.name + " has run out of " + product.name + " and is consuming another person's " + product.name + "!",
-                         chat)
+        # Tallied and balance message:
+        message = "Tallied {1!s} {3!s} for {0!s} (current balance is {2!s} {3!s}).".format(user.name, amount, new_score, product.name)
+        # Attach some additional message if called for
+        # If user remains on the wrong end with a positive tally, add a simple notification & sometimes a personal message:
+        if (old_score >= 0) and (new_score > 0) and (amount > 0):
+            message += "\n{0!s} has run out of {3!s} and is consuming another person's {3!s}!".format(user.name, amount, new_score, product.name)
             # Every fourth product or tally of at least 4 products, remind the user personally
             if (new_score % 4 == 0):
-                self.snark(user, new_score, product.name)
-            elif amount > 3:
-                self.snark(user, new_score, product.name)
+                self.snark(user, new_score, product)
+            elif amount >= 4:
+                self.snark(user, new_score, product)
         # If a user remains on the wrong end with a negative tally, a more encouraging message:
         elif (old_score >= 0) and (new_score > 0) and (amount < 0):
-            self.send_message("Tallied " + str(
-                amount) + " " + product.name + " for " + user.name + " (current balance is " + str(new_score) + " " + product.name + ").\n" + user.name + ", thank you for adding some " + product.name + " to your stock. You did not add enough to return to Tally's good graces, though!",
-                         chat)
+            message += "\n{0!s}, thank you for adding some {3!s} to your stock. You did not add enough to return to Tally's good graces, though!".format(user.name, amount, new_score, product.name)
         # Notify those who add exactly enough:
         elif (old_score >= 0) and (new_score == 0) and (amount < 0):
-            self.send_message("Tallied " + str(
-                amount) + " " + product.name + " for " + user.name + " (current balance is " + str(new_score) + " " + product.name + ").\n" + user.name + ", thank you for adding some " + product.name + " to your stock. Tally likes those who do their bookkeeping to the letter!",
-                         chat)
+            message += "\n{0!s}, thank you for adding some {3!s} to your stock. Tally likes those who do their bookkeeping to the letter!".format(user.name, amount, new_score, product.name)
         # Warn a user if their last item is tallied:
-        elif (new_score >= 0) and (old_score < 0):
-            self.send_message("Tallied " + str(
-                amount) + " " + product.name + " for " + user.name + " (current balance is " + str(new_score) + " " + product.name + ").\n Better enjoy that " + product.name + ", " + user.name + "! You've depleted your stock!",
-                         chat)
-            self.send_message(user.name + ", your last " + product.name + " was just tallied!", telegram_id)
+        elif (old_score < 0) and (new_score >= 0):
+            message += "\nBetter enjoy that {3!s}, {0!s}! You've depleted your stock!".format(user.name, amount, new_score, product.name)
+            self.send_message("{0!s}, your last {3!s} was just tallied!".format(user.name, amount, new_score, product.name), telegram_id)
+        # Send message & commit purchase to database
+        self.send_message(message, chat)
         self.db.save_purchase(chat, purchase)
         return
     
-    def snark(self, user, new_score, productname):
+    def snark(self, user, new_score, product):
         # Unpack input
+        product = product.name
         telegram_id, username = user.telegram_id, user.name
         # Messages
         messages = ["Beste {0!s}, ter ere van deze speciale gelegenheid wil ik graag iets van de wijsheid van onze voormalige koningin met je delen:\n'Hee majesteit, ga eens {1!s} halen!'".format(username, productname),
