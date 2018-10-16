@@ -333,7 +333,10 @@ class RadixEnschedeBot:
             self.send_message("Provide new nick", chat)
             return
         if len(split_text[1]) > 12:
-            self.send_message("Nick to long", chat)
+            self.send_message("Nick too long", chat)
+            return
+        if len(split_text[1]) < 2:
+            self.send_message("Nick too short", chat)
             return
         user = self.db.get_user_by_telegram_id(chat, telegram_id)
         old_nick = user.name
