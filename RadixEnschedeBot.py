@@ -13,7 +13,7 @@ from product import Product
 from NumericStringParser import NumericStringParser
 from dateutil.parser import parse
 from daemon import runner
-
+from requests.exceptions import ConnectionError
 
 class RadixEnschedeBot:
     db = None
@@ -126,11 +126,15 @@ class RadixEnschedeBot:
     def run(self):
         last_update_id = None
         while True:
-            updates = self.get_updates(last_update_id)
-            if "result" in updates:
-                if len(updates["result"]) > 0:
-                    last_update_id = self.get_last_update_id(updates) + 1
-                    self.extract_messages(updates)
+            try:
+                updates = self.get_updates(last_update_id)
+                if "result" in updates:
+                    if len(updates["result"]) > 0:
+                        last_update_id = self.get_last_update_id(updates) + 1
+                        self.extract_messages(updates)
+            except ConnectionError as e:
+                continue
+                
     
     def extract_messages(self, updates):
         for update in updates["result"]:
