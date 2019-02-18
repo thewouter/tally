@@ -97,7 +97,7 @@ class RadixEnschedeBot:
         return js
     
     def get_updates(self, offset=None):
-        url = self.URL + "getUpdates?timeout=100"
+        url = self.URL + "getUpdates?timeout=1000"
         if offset:
             url += "&offset={}".format(offset)
         js = self.get_json_from_url(url)
