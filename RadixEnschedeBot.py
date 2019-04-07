@@ -5,6 +5,7 @@ import requests
 import urllib
 import os
 import json
+import re
 from pathlib import Path
 from array import array
 from random import randrange as randint
@@ -76,6 +77,8 @@ class RadixEnschedeBot:
     
     - Wouter (tally@woutervanharten.nl)"""
 
+    NOT_WHITESPACE = re.compile(r'[^s]')
+
     def __init__(self):
         self.stdin_path = '/dev/null'
         self.stdout_path = '/home/wouter/tally_out'
@@ -142,11 +145,26 @@ class RadixEnschedeBot:
             jsonFile = Path('/data/RadixEnschedeBot/post.json')
             if jsonFile.is_file():
                 with open('/data/RadixEnschedeBot/post.json', 'r') as f:
-                    tallyPost = json.load(f)
-                    x = tallyPost["amount"] + " " + tallyPost["product"]
-                    self.handle_message(tallyPost["group"], x, tallyPost["user"], "", 'group')
+                    data = f.read().replace('\n', '')
+                    for tallyPost in self.decode_stacked(data):
+                        x = tallyPost["amount"] + " " + tallyPost["product"]
+                        self.handle_message(tallyPost["group"], x, tallyPost["user"], "", 'group')
                     f.close()
-                    os.remove('/data/RadixEnschedeBot/post.json')
+                os.remove('/data/RadixEnschedeBot/post.json')
+    
+    def decode_stacked(self, document, pos=0, decoder=json.JSONDecoder()):
+        while True:
+            match = self.NOT_WHITESPACE.search(document, pos)
+            if not match:
+                return
+            pos = match.start()
+
+            try:
+                obj, pos = decoder.raw_decode(document, pos)
+            except json.JSONDecodeError:
+                # do something sensible if there's some error
+                raise
+            yield obj
     
     def extract_messages(self, updates):
         for update in updates["result"]:
