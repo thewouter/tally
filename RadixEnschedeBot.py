@@ -3,6 +3,10 @@
 import json
 import requests
 import urllib
+import os
+import json
+from pathlib import Path
+from array import array
 from random import randrange as randint
 import traceback
 
@@ -134,7 +138,15 @@ class RadixEnschedeBot:
                         self.extract_messages(updates)
             except ConnectionError as e:
                 continue
-                
+            print("test")
+            jsonFile = Path('/data/RadixEnschedeBot/post.json')
+            if jsonFile.is_file():
+                with open('/data/RadixEnschedeBot/post.json', 'r') as f:
+                    tallyPost = json.load(f)
+                    x = tallyPost["amount"] + " " + tallyPost["product"]
+                    self.handle_message(tallyPost["group"], x, tallyPost["user"], "", 'group')
+                    f.close()
+                    os.remove('/data/RadixEnschedeBot/post.json')
     
     def extract_messages(self, updates):
         for update in updates["result"]:
