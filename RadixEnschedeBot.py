@@ -202,7 +202,7 @@ class RadixEnschedeBot:
         text = text.lower()
     
         # Check if in group
-        if type != 'group':
+        if type != 'group' and type != 'supergroup':
             self.personal_message(chat, text, telegram_id, name)
             return
         # Check if chat allowed
