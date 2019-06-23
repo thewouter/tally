@@ -141,7 +141,7 @@ class RadixEnschedeBot:
                         self.extract_messages(updates)
             except ConnectionError as e:
                 continue
-            print("test")
+
             jsonFile = Path('/data/RadixEnschedeBot/post.json')
             if jsonFile.is_file():
                 with open('/data/RadixEnschedeBot/post.json', 'r') as f:
