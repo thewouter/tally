@@ -430,7 +430,8 @@ class RadixEnschedeBot:
     
     def show_tallies(self, chat, split_text, telegram_id):
         message = "=== Tallies ===\n"
-        totals = self.db.get_user_by_telegram_id(chat, telegram_id).get_total_per_product(chat)
+        user = self.db.get_user_by_telegram_id(chat, telegram_id)
+        totals = self.db.get_all_tallies(chat, user)
         for key, value in totals.items():
             message += key + ": " + str(value) + "\n"
         self.send_message(message, telegram_id)
