@@ -1,14 +1,30 @@
 # @author Wouter van Harten <wouter@woutervanharten.nl>
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import relationship
 
-class User(object):
-    id = None
-    name = None
-    telegram_id = None
-    purchases = []
+from Group import Group
+from Purchase import Purchase
+from base import Base
+
+
+class User(Base):
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    telegram_id = Column(Integer)
+    purchases = relationship("Purchase", order_by=Purchase.id, back_populates="user")
+    groups = relationship("Group", order_by=Group.id, back_populates="user")
+
+    def __repr__(self):
+        return "<User(name='%s, telegram_id='%s)>" % (self.name, self.telegram_id)
 
     def __init__(self, name, telegram_id):
         self.name = name
         self.telegram_id = telegram_id
+
+    def set_name(self, name):
+        self.name = name
 
     def set_purchases(self, purchases):
         self.purchases = purchases

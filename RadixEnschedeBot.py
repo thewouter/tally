@@ -1,28 +1,29 @@
 # @author Wouter van Harten <wouter@woutervanharten.nl>
 
 import json
-import requests
-import urllib
 import os
-import json
 import re
-from pathlib import Path
-from array import array
-from random import randrange as randint
 import traceback
+import urllib
+from pathlib import Path
+from random import randrange as randint
 
-from dbhelper import DBHelper
-from user import User
-from purchase import Purchase
-from product import Product
-from NumericStringParser import NumericStringParser
+import daemon
+import requests
+import sqlalchemy
 from dateutil.parser import parse
-from daemon import runner
 from requests.exceptions import ConnectionError
+
+from NumericStringParser import NumericStringParser
+from Product import Product
+from Purchase import Purchase
+from User import User
+from dbhelper import DBHelper
+
 
 class RadixEnschedeBot:
     db = None
-
+    sqlalchemy.create
     TOKEN = ""
     URL = "https://api.telegram.org/bot{}/".format(TOKEN)
     ADMIN = 0
@@ -67,7 +68,7 @@ class RadixEnschedeBot:
     If you start your sentence with a dot, Tally will ignore it.
     Example
     . hey Tally! Tally! hey Tally! TALLY!!!"""
-    
+
     info_text = """Tally is a simple Telegram-bot
     He is created because someone was to lazy to stand up and tally his beer. 
     This someone rather preferred program a complete Telegram-bot.
@@ -83,7 +84,7 @@ class RadixEnschedeBot:
         self.stdin_path = '/dev/null'
         self.stdout_path = '/home/wouter/tally_out'
         self.stderr_path = '/home/wouter/tally_err'
-        self.pidfile_path =  '/tmp/tally.pid'
+        self.pidfile_path = '/tmp/tally.pid'
         self.pidfile_timeout = 5
         self.db = DBHelper()
         with open("/data/RadixEnschedeBot/config.json", "r") as data_file:
@@ -92,17 +93,16 @@ class RadixEnschedeBot:
         self.TOKEN = data['TOKEN']
         self.URL = "https://api.telegram.org/bot{}/".format(self.TOKEN)
 
-
     def get_url(self, url):
         response = requests.get(url)
         content = response.content.decode("utf8")
         return content
-    
+
     def get_json_from_url(self, url):
         content = self.get_url(url)
         js = json.loads(content)
         return js
-    
+
     def get_updates(self, offset=None):
         url = self.URL + "getUpdates?timeout=1000"
         if offset:
@@ -116,13 +116,13 @@ class RadixEnschedeBot:
         text = updates["result"][last_update]["message"]["text"]
         chat_id = updates["result"][last_update]["message"]["chat"]["id"]
         return (text, chat_id)
-    
+
     def get_last_update_id(self, updates):
         update_ids = []
         for update in updates["result"]:
             update_ids.append(int(update["update_id"]))
         return max(update_ids)
-    
+
     def send_message(self, text, chat_id, reply_markup=None):
         text = urllib.parse.quote_plus(text)
         url = self.URL + "sendMessage?text={}&chat_id={}".format(text, chat_id)
@@ -151,7 +151,7 @@ class RadixEnschedeBot:
                         self.handle_message(tallyPost["group"], x, tallyPost["user"], "", 'group')
                     f.close()
                 os.remove('/data/RadixEnschedeBot/post.json')
-    
+
     def decode_stacked(self, document, pos=0, decoder=json.JSONDecoder()):
         while True:
             match = self.NOT_WHITESPACE.search(document, pos)
@@ -165,7 +165,7 @@ class RadixEnschedeBot:
                 # do something sensible if there's some error
                 raise
             yield obj
-    
+
     def extract_messages(self, updates):
         for update in updates["result"]:
             try:
@@ -175,32 +175,32 @@ class RadixEnschedeBot:
                 name = update["message"]["from"]["first_name"]
                 type = update["message"]["chat"]["type"]
                 self.handle_message(chat, text, telegram_id, name, type)
-    
+
             except Exception as e:
                 print(e)
                 traceback.print_stack()
                 print(update)
                 print("")
-    
+
     def personal_message(self, chat, text, telegram_id, name):
         if str(telegram_id) != str(self.ADMIN):
             self.send_message("Add me to a group :)", telegram_id)
             return
-    
+
         split_text = text.split()
         switcher = {
             '/add_chat': self.add_chat
         }
         fun = switcher.get(split_text[0], self.command_not_found)
         fun(chat, split_text, telegram_id)
-    
+
     def add_chat(self, chat, split_text, telegram_id):
         self.db.add_chat(int(split_text[1]))
         self.send_message("Added " + split_text[1], self.ADMIN)
-    
+
     def handle_message(self, chat, text, telegram_id, name, type):
         text = text.lower()
-    
+
         # Check if in group
         if type != 'group' and type != 'supergroup':
             self.personal_message(chat, text, telegram_id, name)
@@ -208,9 +208,11 @@ class RadixEnschedeBot:
         # Check if chat allowed
         if not self.db.check_chat(chat):
             self.send_message("Ask Wouter van Harten (+31)6 833 24 277 to whitelist <" + str(chat) + ">", chat)
-            self.send_message("Activity from unknown chat <" + str(chat) + ">, maybe you can whitelist it with '/add_chat " + str(chat) + "' ?", self.ADMIN)
+            self.send_message(
+                "Activity from unknown chat <" + str(chat) + ">, maybe you can whitelist it with '/add_chat " + str(
+                    chat) + "' ?", self.ADMIN)
             return
-    
+
         # Build/Check chat database
         self.db.setup(chat)
         # Check for STFU
@@ -220,9 +222,9 @@ class RadixEnschedeBot:
         if text[0] == '/':
             self.handle_command(chat, text, telegram_id)
             return
-    
+
         split_text = text.split()
-    
+
         nsp = NumericStringParser()
         try:
             int(nsp.eval(split_text[0]))
@@ -231,7 +233,7 @@ class RadixEnschedeBot:
         except Exception as e:
             print(e)
             pass
-    
+
         # Try for username
         user = self.db.get_user_by_name(chat, split_text[0])
         if user != False:
@@ -277,11 +279,14 @@ class RadixEnschedeBot:
             old_score = 0
             new_score = amount
         # Tallied and balance message:
-        message = "Tallied {1!s} {3!s} for {0!s} (current balance is {2!s} {3!s}).".format(user.name, amount, new_score, product.name)
+        message = "Tallied {1!s} {3!s} for {0!s} (current balance is {2!s} {3!s}).".format(user.name, amount, new_score,
+                                                                                           product.name)
         # Attach some additional message if called for
         # If user remains on the wrong end with a positive tally, add a simple notification & sometimes a personal message:
         if (old_score >= 0) and (new_score > 0) and (amount > 0):
-            message += "\n{0!s} has run out of {3!s} and is consuming another person's {3!s}!".format(user.name, amount, new_score, product.name)
+            message += "\n{0!s} has run out of {3!s} and is consuming another person's {3!s}!".format(user.name, amount,
+                                                                                                      new_score,
+                                                                                                      product.name)
             # Every fourth product or tally of at least 4 products, remind the user personally
             if (new_score % 4 == 0):
                 self.snark(user, new_score, product)
@@ -289,30 +294,41 @@ class RadixEnschedeBot:
                 self.snark(user, new_score, product)
         # If a user remains on the wrong end with a negative tally, a more encouraging message:
         elif (old_score >= 0) and (new_score > 0) and (amount < 0):
-            message += "\n{0!s}, thank you for adding some {3!s} to your stock. You did not add enough to return to Tally's good graces, though!".format(user.name, amount, new_score, product.name)
+            message += "\n{0!s}, thank you for adding some {3!s} to your stock. You did not add enough to return to Tally's good graces, though!".format(
+                user.name, amount, new_score, product.name)
         # Notify those who add exactly enough:
         elif (old_score >= 0) and (new_score == 0) and (amount < 0):
-            message += "\n{0!s}, thank you for adding some {3!s} to your stock. Tally likes those who do their bookkeeping to the letter!".format(user.name, amount, new_score, product.name)
+            message += "\n{0!s}, thank you for adding some {3!s} to your stock. Tally likes those who do their bookkeeping to the letter!".format(
+                user.name, amount, new_score, product.name)
         # Warn a user if their last item is tallied:
         elif (old_score < 0) and (new_score >= 0):
-            message += "\nBetter enjoy that {3!s}, {0!s}! You've depleted your stock!".format(user.name, amount, new_score, product.name)
-            self.send_message("{0!s}, your last {3!s} was just tallied!".format(user.name, amount, new_score, product.name), telegram_id)
+            message += "\nBetter enjoy that {3!s}, {0!s}! You've depleted your stock!".format(user.name, amount,
+                                                                                              new_score, product.name)
+            self.send_message(
+                "{0!s}, your last {3!s} was just tallied!".format(user.name, amount, new_score, product.name),
+                telegram_id)
         # Send message & commit purchase to database
         self.send_message(message, chat)
         self.db.save_purchase(chat, purchase)
         return
-    
+
     def snark(self, user, new_score, product):
         # Unpack input
         productname = product.name
         telegram_id, username = user.telegram_id, user.name
         # Messages
-        messages = ["Beste {0!s}, ter ere van deze speciale gelegenheid wil ik graag iets van de wijsheid van onze voormalige koningin met je delen:\n'Hee majesteit, ga eens {1!s} halen!'".format(username, productname),
-                    "Beste {0!s}, wat advies: {1!s} {2!s} schuld is {1!s} {2!s} schuld teveel!".format(username, new_score, productname),
-                    "Beste {0!s}, wist je dat Albert Heijn XL tot 22:00 open is en ze daar {2!s} hebben?".format(username, new_score, productname),
-                    "Beste {0!s}, voor jou is het geen {2!s}tijd, maar supermarkttijd!".format(username, new_score, productname),
-                    "Je creëert nu een {2!s}probleem, en nee dat is geen poar neem".format(username, new_score, productname),
-                    "2 woorden, {3!s} letters: {2!s} halen!".format(username, new_score, productname, len(productname)+5)]
+        messages = [
+            "Beste {0!s}, ter ere van deze speciale gelegenheid wil ik graag iets van de wijsheid van onze voormalige koningin met je delen:\n'Hee majesteit, ga eens {1!s} halen!'".format(
+                username, productname),
+            "Beste {0!s}, wat advies: {1!s} {2!s} schuld is {1!s} {2!s} schuld teveel!".format(username, new_score,
+                                                                                               productname),
+            "Beste {0!s}, wist je dat Albert Heijn XL tot 22:00 open is en ze daar {2!s} hebben?".format(username,
+                                                                                                         new_score,
+                                                                                                         productname),
+            "Beste {0!s}, voor jou is het geen {2!s}tijd, maar supermarkttijd!".format(username, new_score,
+                                                                                       productname),
+            "Je creëert nu een {2!s}probleem, en nee dat is geen poar neem".format(username, new_score, productname),
+            "2 woorden, {3!s} letters: {2!s} halen!".format(username, new_score, productname, len(productname) + 5)]
         # Random integer
         i = randint(0, len(messages))
         message = messages[i]
@@ -326,7 +342,7 @@ class RadixEnschedeBot:
         # Send random message
         self.send_message(message, telegram_id)
         return
-    
+
     def handle_command(self, chat, text, telegram_id):
         switcher = {
             '/help': self.show_help,
@@ -348,20 +364,22 @@ class RadixEnschedeBot:
         fun = switcher.get(command, self.command_not_found)
         fun(chat, split_text, telegram_id)
         return
-    
+
     def command_not_found(self, chat, split_text, telegram_id):
         self.send_message("Command not found: " + split_text[0], chat)
-    
+
     def show_help(self, chat, split_text, telegram_id):
         self.send_message(self.help_text, telegram_id)
-        self.send_message("Message answered privately. \nIf you didn't get my message, send me a private message and try again."
-                     , chat)
-    
+        self.send_message(
+            "Message answered privately. \nIf you didn't get my message, send me a private message and try again."
+            , chat)
+
     def show_info(self, chat, split_text, telegram_id):
         self.send_message(self.info_text, telegram_id)
-        self.send_message("Message answered privately. \nIf you didn't get my message, send me a private message and try again."
-                     , chat)
-    
+        self.send_message(
+            "Message answered privately. \nIf you didn't get my message, send me a private message and try again."
+            , chat)
+
     def set_nick(self, chat, split_text, telegram_id):
         if len(split_text) < 2:
             self.send_message("Provide new nick", chat)
@@ -377,21 +395,21 @@ class RadixEnschedeBot:
         user.name = split_text[1]
         self.db.save_user(chat, user)
         self.send_message("Nick changed from " + old_nick + " to " + user.name, chat)
-    
+
     def show_nicks(self, chat, split_text, telegram_id):
         users = self.db.get_all_users(chat)
         message = "=== NICKS === \n"
         for user in users:
             message += user.telegram_id + ": " + user.name + "\n"
         self.send_message(message, chat)
-    
+
     def show_products(self, chat, split_text, telegram_id):
         products = self.db.get_all_products(chat, False)
         message = "=== PRODUCTS ===\n"
         for product in products:
             message += product.name + "\n"
         self.send_message(message, chat)
-    
+
     def show_debtors(self, chat, split_text, telegram_id):
         users = self.db.get_all_users(chat, False)
         message = "=== DEBTORS ===\n"
@@ -407,7 +425,7 @@ class RadixEnschedeBot:
             if shown_name:
                 message += "\n"
         self.send_message(message, chat)
-    
+
     def show_all_tallies(self, chat, split_text, telegram_id):
         users = self.db.get_all_users(chat, False)
         message = "=== All tallies ===\n"
@@ -427,7 +445,7 @@ class RadixEnschedeBot:
         for key, value in allTallies.items():
             message += key + ": " + str(value) + "\n"
         self.send_message(message, chat)
-    
+
     def show_tallies(self, chat, split_text, telegram_id):
         message = "=== Tallies ===\n"
         user = self.db.get_user_by_telegram_id(chat, telegram_id)
@@ -435,9 +453,10 @@ class RadixEnschedeBot:
         for key, value in totals.items():
             message += key + ": " + str(value) + "\n"
         self.send_message(message, telegram_id)
-        self.send_message("Message answered privately. \nIf you didn't get my message, send me a private message and try again."
-                     , chat)
-    
+        self.send_message(
+            "Message answered privately. \nIf you didn't get my message, send me a private message and try again."
+            , chat)
+
     def add_product(self, chat, split_text, telegram_id):
         if telegram_id != self.ADMIN:
             self.send_message("🖕🖕🖕🖕🖕🖕", chat)
@@ -445,7 +464,7 @@ class RadixEnschedeBot:
         self.db.save_product(chat, Product(split_text[1]))
         self.show_products(chat, split_text, telegram_id)
         return
-    
+
     def show_all_history(self, chat, split_text, telegram_id):
         if len(split_text) > 1:
             try:
@@ -458,10 +477,10 @@ class RadixEnschedeBot:
         purchases = self.db.get_last_purchases(chat, amount)
         message = "=== All history ===\n"
         for purchase in purchases:
-            message += "(" + parse(purchase.date).strftime("%m/%d %H:%M") + ") " + str(purchase.amount) + " " +\
+            message += "(" + parse(purchase.date).strftime("%m/%d %H:%M") + ") " + str(purchase.amount) + " " + \
                        purchase.product.name + " by " + purchase.user.name + "\n"
         self.send_message(message, chat)
-    
+
     def show_history(self, chat, split_text, telegram_id):
         if len(split_text) > 1:
             try:
@@ -478,12 +497,13 @@ class RadixEnschedeBot:
         purchases = self.db.get_last_purchases(chat, amount, user)
         message = "=== History ===\n"
         for purchase in purchases:
-            message += "(" + parse(purchase.date).strftime("%m/%d %H:%M") + ") " + str(purchase.amount) + " " +\
+            message += "(" + parse(purchase.date).strftime("%m/%d %H:%M") + ") " + str(purchase.amount) + " " + \
                        purchase.product.name + " by " + purchase.user.name + "\n"
         self.send_message(message, telegram_id)
-        self.send_message("Message answered privately. \nIf you didn't get my message, send me a private message and try again."
-                     , chat)
-    
+        self.send_message(
+            "Message answered privately. \nIf you didn't get my message, send me a private message and try again."
+            , chat)
+
     def thank_user(self, chat, split_text, telegram_id):
         if len(split_text) < 2:
             self.send_message("No receiver given", chat)
@@ -511,5 +531,5 @@ class RadixEnschedeBot:
 
 if __name__ == '__main__':
     tally = RadixEnschedeBot()
-    daemon_runner = runner.DaemonRunner(tally)
-    daemon_runner.do_action()
+    with daemon.DaemonContext():
+        tally.run()

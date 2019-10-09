@@ -1,15 +1,26 @@
 # @author Wouter van Harten <wouter@woutervanharten.nl>
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import relationship
 
-class Product(object):
-    id = None
-    name = None
-    purchases = []
+from Purchase import Purchase
+from base import Base
+
+
+class Product(Base):
+    __tablename__ = "products"
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+
+    purchases = relationship("Purchase", order_by=Purchase.id, back_populates="product")
 
     def __init__(self, name):
         self.name = name
 
+    def __repr__(self):
+        return "<Product(name='%s)>" % self.name
+
     def set_purchases(self, purchases):
-        self.purchases = purchases
+        pass
 
     def set_id(self, id):
         self.id = id

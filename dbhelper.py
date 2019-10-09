@@ -1,16 +1,31 @@
 import sqlite3
 
-from user import User
-from product import Product
-from purchase import Purchase
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-
+from Product import Product
+from Purchase import Purchase
+from User import User
 # @author Wouter van Harten <wouter@woutervanharten.nl>
+from base import Base
+
 
 class DBHelper:
     save_location = "/data/RadixEnschedeBot/"
     
     def __init__(self, dbname="tally.sqlite"):
+
+        engine = create_engine('sqlite:///' + dbname, echo=True)
+
+        sessionFactory = sessionmaker(bind=engine)
+        session = sessionFactory()
+
+        print(User.__table__.__repr__())
+
+        Base.metadata.create_all(engine)
+
+        session.commit()
+
         self.dbname = self.save_location + dbname
         self.conn = sqlite3.connect(dbname)
         stmt = "CREATE TABLE IF NOT EXISTS chats (id INTEGER PRIMARY KEY)"
