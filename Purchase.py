@@ -13,19 +13,21 @@ class Purchase(Base):
     amount = Column(Integer)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     product_id = Column(Integer, ForeignKey('products.id'), nullable=False)
+    group_id = Column(Integer, ForeignKey('groups.id'), nullable=False)
     date = Column(String)
 
+    group = relationship("Group", back_populates="purchases")
     user = relationship("User", back_populates="purchases")
     product = relationship("Product", back_populates="purchases")
 
     def __repr__(self):
-        return "<Purchase(amount='%s, product='%s)>" % (str(self.amount), str(self.product))
+        return "<Purchase(amount='%s', product='%s', user='%s')>" % (str(self.amount), str(self.product), str(self.user))
 
-    def __init__(self, user, product, amount, chat, date=None):
+    def __init__(self, user, product, amount, group, date=None):
         self.amount = amount
         self.product = product
         self.user = user
-        self.chat = chat
+        self.group = group
         if date is None:
             date = str(datetime.datetime.now())
         self.date = date

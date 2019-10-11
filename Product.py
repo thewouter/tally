@@ -1,5 +1,5 @@
 # @author Wouter van Harten <wouter@woutervanharten.nl>
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 
 from Purchase import Purchase
@@ -10,11 +10,14 @@ class Product(Base):
     __tablename__ = "products"
     id = Column(Integer, primary_key=True)
     name = Column(String)
+    group_id = Column(Integer,  ForeignKey('groups.id'))
 
     purchases = relationship("Purchase", order_by=Purchase.id, back_populates="product")
+    group = relationship("Group", back_populates="products")
 
-    def __init__(self, name):
+    def __init__(self, name, group):
         self.name = name
+        self.group = group
 
     def __repr__(self):
         return "<Product(name='%s)>" % self.name

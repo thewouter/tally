@@ -1,29 +1,30 @@
 # @author Wouter van Harten <wouter@woutervanharten.nl>
-
+import copy
 import json
 import os
 import re
+import sys
 import traceback
 import urllib
 from pathlib import Path
 from random import randrange as randint
+import random
 
-import daemon
 import requests
-import sqlalchemy
 from dateutil.parser import parse
 from requests.exceptions import ConnectionError
 
+from Group import Group
 from NumericStringParser import NumericStringParser
 from Product import Product
 from Purchase import Purchase
 from User import User
+from daemon import runner
 from dbhelper import DBHelper
 
 
 class RadixEnschedeBot:
     db = None
-    sqlalchemy.create
     TOKEN = ""
     URL = "https://api.telegram.org/bot{}/".format(TOKEN)
     ADMIN = 0
@@ -87,7 +88,7 @@ class RadixEnschedeBot:
         self.pidfile_path = '/tmp/tally.pid'
         self.pidfile_timeout = 5
         self.db = DBHelper()
-        with open("/data/RadixEnschedeBot/config.json", "r") as data_file:
+        with open("config.json", "r") as data_file:
             data = json.load(data_file)
         self.ADMIN = data['ADMIN']
         self.TOKEN = data['TOKEN']
@@ -142,15 +143,15 @@ class RadixEnschedeBot:
             except ConnectionError as e:
                 continue
 
-            jsonFile = Path('/data/RadixEnschedeBot/post.json')
+            jsonFile = Path('post.json')
             if jsonFile.is_file():
-                with open('/data/RadixEnschedeBot/post.json', 'r') as f:
+                with open('post.json', 'r') as f:
                     data = f.read().replace('\n', '')
                     for tallyPost in self.decode_stacked(data):
                         x = tallyPost["amount"] + " " + tallyPost["product"]
                         self.handle_message(tallyPost["group"], x, tallyPost["user"], "", 'group')
                     f.close()
-                os.remove('/data/RadixEnschedeBot/post.json')
+                os.remove('post.json')
 
     def decode_stacked(self, document, pos=0, decoder=json.JSONDecoder()):
         while True:
@@ -196,7 +197,7 @@ class RadixEnschedeBot:
 
     def add_chat(self, chat, split_text, telegram_id):
         self.db.add_chat(int(split_text[1]))
-        self.send_message("Added " + split_text[1], self.ADMIN)
+        self.send_message("Added " + str(split_text[1]), self.ADMIN)
 
     def handle_message(self, chat, text, telegram_id, name, type):
         text = text.lower()
@@ -213,8 +214,6 @@ class RadixEnschedeBot:
                     chat) + "' ?", self.ADMIN)
             return
 
-        # Build/Check chat database
-        self.db.setup(chat)
         # Check for STFU
         if text[0] == ".":
             return
@@ -232,7 +231,6 @@ class RadixEnschedeBot:
             return
         except Exception as e:
             print(e)
-            pass
 
         # Try for username
         user = self.db.get_user_by_name(chat, split_text[0])
@@ -258,23 +256,24 @@ class RadixEnschedeBot:
         if (not make_new_user) & (user == False):
             self.send_message("Unkown user: " + name, chat)
             return
-        if user == False:
+        if user is False:
             user = User(name.lower(), telegram_id)
-            self.db.save_user(chat, user)
+            user.groups.append(self.db.get_chat(chat))
+            self.db.save_user(user)
         user = self.db.get_user_by_telegram_id(chat, telegram_id)
         if len(split_text) < 2:
-            product = self.db.get_product(chat, 1)
+            product = self.db.get_chat(chat).products[0]
         else:
             product = self.db.get_product_by_name(chat, split_text[1])
             if product == False:
                 self.send_message("Unknown product: " + split_text[1], chat)
                 return
-        purchase = Purchase(user, product, amount, chat)
+        purchase = Purchase(user, product, amount, self.db.get_chat(chat))
         # Get old score and new score
         all_tallies = self.db.get_all_tallies(chat, user)
         if product.name in all_tallies.keys():
-            old_score = all_tallies[product.name]
-            new_score = old_score + amount
+            new_score = copy.copy(all_tallies[product.name])
+            old_score = new_score - amount
         else:
             old_score = 0
             new_score = amount
@@ -309,7 +308,7 @@ class RadixEnschedeBot:
                 telegram_id)
         # Send message & commit purchase to database
         self.send_message(message, chat)
-        self.db.save_purchase(chat, purchase)
+        self.db.save_purchase(purchase)
         return
 
     def snark(self, user, new_score, product):
@@ -393,7 +392,7 @@ class RadixEnschedeBot:
         user = self.db.get_user_by_telegram_id(chat, telegram_id)
         old_nick = user.name
         user.name = split_text[1]
-        self.db.save_user(chat, user)
+        self.db.save_user(user)
         self.send_message("Nick changed from " + old_nick + " to " + user.name, chat)
 
     def show_nicks(self, chat, split_text, telegram_id):
@@ -459,9 +458,9 @@ class RadixEnschedeBot:
 
     def add_product(self, chat, split_text, telegram_id):
         if telegram_id != self.ADMIN:
-            self.send_message("🖕🖕🖕🖕🖕🖕", chat)
+            self.send_message("🖕🖕🖕🖕🖕🖕🖕🖕🖕🖕🖕🖕🖕erw", chat)
             return
-        self.db.save_product(chat, Product(split_text[1]))
+        self.db.save_product(Product(split_text[1], self.db.get_chat(chat)))
         self.show_products(chat, split_text, telegram_id)
         return
 
@@ -513,8 +512,8 @@ class RadixEnschedeBot:
             self.send_message("Unknown user: " + split_text[1], chat)
             return
         user = self.db.get_user_by_telegram_id(chat, telegram_id)
-        self.db.save_purchase(chat, Purchase(user, self.db.get_product(chat, 1), 1, chat))
-        self.db.save_purchase(chat, Purchase(receiver, self.db.get_product(chat, 1), -1, chat))
+        self.db.save_purchase(chat, Purchase(user, self.db.get_product(chat, 1), 1, self.db.get_chat(chat)))
+        self.db.save_purchase(chat, Purchase(receiver, self.db.get_product(chat, 1), -1, self.db.get_chat(chat)))
         message = "Thanks " + receiver.name + "! \nI don't know what you did " + receiver.name + ", but " + user.name + \
                   " would like to thank you! \n" + user.name + \
                   " has granted you a tally from his/her own pocket \nEnjoy, Tally"
@@ -528,8 +527,48 @@ class RadixEnschedeBot:
         self.send_message("I will update shortly..", chat)
         f.close()
 
+    def test(self):
+        # group = Group(-294368505)
+        # u1 = User("user1", 1)
+        # u2 = User("user2", 2)
+        # u3 = User("user3", 3)
+        # u4 = User("user4", 4)
+        # u1.groups.append(group)
+        # u2.groups.append(group)
+        # u3.groups.append(group)
+        # u4.groups.append(group)
+        # self.db.save_user(u1)
+        # self.db.save_user(u2)
+        # self.db.save_user(u3)
+        # self.db.save_user(u4)
+        # pr1 = Product("soda1", group)
+        # pr2 = Product("soda2", group)
+        # pr3 = Product("soda3", group)
+        # pr4 = Product("soda4", group)
+        # self.db.save_product(pr1)
+        # self.db.save_product(pr2)
+        # self.db.save_product(pr3)
+        # self.db.save_product(pr4)
+        #
+        # for i in range(1, 500):
+        #     self.db.save_purchase(Purchase(random.choice(group.users), random.choice(group.products), 1, group))
+        # self.db.session.commit()
+        # u=self.db.get_user(-294368505, 13)
+        # p=self.db.get_product(-294368505, 17)
+        # c=self.db.get_chat(-294368505)
+        # p = Purchase(u, p, 5, c)
+        # print(repr(p))
+        # self.db.save_purchase(p)
+
+        msg = "1"
+        self.handle_message(-294368505, msg, self.ADMIN, "wouter", "group")
+
 
 if __name__ == '__main__':
     tally = RadixEnschedeBot()
-    with daemon.DaemonContext():
-        tally.run()
+    if sys.argv[1] == "test":
+        tally.test()
+
+        exit()
+    daemon_runner = runner.DaemonRunner(tally)
+    daemon_runner.do_action()

@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 
 from Group import Group
 from Purchase import Purchase
-from base import Base
+from base import Base, association_table
 
 
 class User(Base):
@@ -14,7 +14,7 @@ class User(Base):
     name = Column(String)
     telegram_id = Column(Integer)
     purchases = relationship("Purchase", order_by=Purchase.id, back_populates="user")
-    groups = relationship("Group", order_by=Group.id, back_populates="user")
+    groups = relationship("Group", secondary=association_table, back_populates="users")
 
     def __repr__(self):
         return "<User(name='%s, telegram_id='%s)>" % (self.name, self.telegram_id)
@@ -32,11 +32,11 @@ class User(Base):
     def set_id(self, id):
         self.id = id
 
-    def get_total_per_product(self, chat):
+    def get_total_per_product(self, group):
         totals = {}
         keys = []
         for purchase in self.purchases:
-            if purchase.chat == chat:
+            if purchase.group.id == group.id:
                 if purchase.product.id in keys:
                     totals[purchase.product.name] += purchase.amount
                 else:
