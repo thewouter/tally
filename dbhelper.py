@@ -1,5 +1,4 @@
 # @author Wouter van Harten <wouter@woutervanharten.nl>
-import os
 
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
@@ -12,28 +11,17 @@ from base import Base
 
 
 class DBHelper:
-    save_location = ""
     session = None
     engine = None
 
     def __init__(self, dbname="tally.sqlite"):
-
-        self.engine = create_engine('sqlite:///' + dbname, echo=False)
-
+        self.engine = create_engine('sqlite:///' + dbname, echo=True)
         sessionFactory = sessionmaker(bind=self.engine)
         self.session = sessionFactory()
-
         Base.metadata.create_all(self.engine)
-
-        self.session.commit()
-
-        self.save_location = os.getcwd() + "/"
 
     def get_chat(self, chat):
         return self.session.query(Group).filter_by(telegram_id=chat).first()
-
-    def get_save_location(self):
-        return self.save_location
 
     def add_chat(self, chat):
         self.session.add(Group(telegram_id=chat))
@@ -50,28 +38,28 @@ class DBHelper:
         return False
 
     def get_user_by_name(self, chat, name):
-        user = self.session.query(User).filter_by(name=name).filter(User.groups.any(id=chat)).first()
+        user = self.session.query(User).filter_by(name=name).filter(User.groups.any(telegram_id=chat)).first()
         if user is not None:
             return user
         return False
 
-    def get_all_users(self, chat, recursive=True):
-        return self.session.query(User).filter(User.groups.any(id=chat)).all()
+    def get_all_users(self, chat):
+        return self.session.query(User).filter(User.groups.any(telegram_id=chat)).all()
 
-    def get_user(self, chat, user_id, recursive=True):
+    def get_user(self, user_id):
         return self.session.query(User).filter_by(id=user_id).first()
 
-    def save_user(self, user):
+    def add_user(self, user):
         self.session.add(user)
         self.session.commit()
 
-    def get_all_products(self, chat, recursive=True):
+    def get_all_products(self, chat):
         return self.get_chat(chat).products
 
-    def get_product(self, chat, product_id, recursive=True):
+    def get_product(self, product_id,):
         return self.session.query(Product).filter_by(id=product_id).first()
 
-    def save_product(self, product):
+    def add_product(self, product):
         self.session.add(product)
         self.session.commit()
 
@@ -81,21 +69,21 @@ class DBHelper:
     def get_last_purchases(self, chat, amount=10, user=None):
         if user is None:
             return self.session.query(Purchase)\
-                .filter_by(group_id=chat)\
+                .filter_by(group=self.get_chat(chat))\
+                .order_by(Purchase.date.desc()) \
                 .limit(amount)\
-                .order_by(Purchase.date.Desc()) \
                 .all()
         else:
             return self.session.query(Purchase) \
-                .filter_by(group_id=chat, user_id=user.id) \
+                .filter_by(group=self.get_chat(chat), user_id=user.id) \
+                .order_by(Purchase.date.desc()) \
                 .limit(amount) \
-                .order_by(Purchase.date.Desc()) \
                 .all()
 
-    def get_purchase(self, chat, purchase_id, user=None, product=None):
+    def get_purchase(self, purchase_id):
         return self.session.query(Purchase).filter_by(id=purchase_id).first()
 
-    def save_purchase(self, purchase):
+    def add_purchase(self, purchase):
         self.session.add(purchase)
         self.session.commit()
 
@@ -108,7 +96,7 @@ class DBHelper:
             .order_by(Purchase.product_id.desc())\
             .all()
         for tup in res:
-            result[self.get_product(chat, tup[0], False).name] = tup[1]
+            result[self.get_product(tup[0]).name] = tup[1]
         return result
 
     def get_total_tallies(self, chat):
@@ -119,5 +107,5 @@ class DBHelper:
             .order_by(Purchase.product_id.desc()) \
             .all()
         for tup in res:
-            result[self.get_product(chat, tup[0], False).name] = tup[1]
+            result[self.get_product(tup[0]).name] = tup[1]
         return result

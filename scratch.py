@@ -1,25 +1,44 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+import sqlite3
 
 from Product import Product
 from Purchase import Purchase
 from User import User
 from base import Base
+from dbhelper import DBHelper
 
-engine = create_engine('sqlite:///database.sqlite', echo=True)
-sessionFactory = sessionmaker(bind=engine)
-session = sessionFactory()
+def create_connection(db_file):
+    """ create a database connection to the SQLite database
+        specified by the db_file
+    :param db_file: database file
+    :return: Connection object or None
+    """
+    conn = None
+    try:
+        conn = sqlite3.connect(db_file)
+    except sqlite3.Error as e:
+        print(e)
 
-print(User.__table__.__repr__())
+    return conn
 
-Base.metadata.create_all(engine)
 
-product = Product("prod1")
-user = User("naam", 1)
-q_user = session.query(User).filter_by(name='naam').first()
-print(user is q_user)
-session.add(product)
-user.set_name("othername")
+db = DBHelper()
 
-purchase = Purchase(user, product, 49, 1)
-session.commit()
+con = create_connection('radix.sqlite')
+
+purchases = con.execute("SELECT * FROM purchase").fetchall()
+
+group = db.get_chat(-1001487022745)
+
+for tup in purchases:
+    u = db.get_user(tup[1])
+    pr = db.get_product(tup[2])
+    amount = tup[3]
+    p = Purchase(u, pr, amount, group, date=tup[5])
+    db.add_purchase(p)
+
+
+
+
+
+
+
