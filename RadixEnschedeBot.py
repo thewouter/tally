@@ -250,8 +250,9 @@ class RadixEnschedeBot:
         if abs(amount) > 99:
             self.send_message("Tally between -100 and 100, " + str(amount) + " given", chat)
             return
-        if abs(amount) < 0.5 :
+        if abs(amount) < 0.5:
             self.send_message("That's a bunch of nothing you have there", chat)
+            return
         user = self.db.get_user_by_telegram_id(chat, telegram_id)
         if (not make_new_user) & (user == False):
             self.send_message("Unkown user: " + name, chat)
