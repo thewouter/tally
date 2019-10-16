@@ -254,8 +254,8 @@ class RadixEnschedeBot:
             self.send_message("That's a bunch of nothing you have there", chat)
             return
         user = self.db.get_user_by_telegram_id(telegram_id)
-        if not user.groups.contains(self.db.get_chat(chat)) and make_new_user:
-            user.groups.add(self.db.get_chat(chat))
+        if self.db.get_chat(chat) not in user.groups and make_new_user:
+            user.groups.append(self.db.get_chat(chat))
         if (not make_new_user) & (user == False):
             self.send_message("Unknown user: " + name, chat)
             return
@@ -263,7 +263,7 @@ class RadixEnschedeBot:
             user = User(name.lower(), telegram_id)
             user.groups.append(self.db.get_chat(chat))
             self.db.add_user(user)
-        user = self.db.get_user_by_telegram_id(chat, telegram_id)
+        user = self.db.get_user_by_telegram_id(telegram_id)
         if len(split_text) < 2:
             product = self.db.get_chat(chat).products[0]
         else:
@@ -272,7 +272,6 @@ class RadixEnschedeBot:
                 self.send_message("Unknown product: " + split_text[1], chat)
                 return
         purchase = Purchase(user, product, amount, self.db.get_chat(chat))
-        print(repr(purchase))
         # Get old score and new score
         all_tallies = self.db.get_all_tallies(chat, user)
         if product.name in all_tallies.keys():
@@ -398,7 +397,7 @@ class RadixEnschedeBot:
         if len(split_text[1]) < 2:
             self.send_message("Nick too short", chat)
             return
-        user = self.db.get_user_by_telegram_id(chat, telegram_id)
+        user = self.db.get_user_by_telegram_id(telegram_id)
         old_nick = user.name
         user.name = split_text[1]
         self.db.add_user(user)
@@ -456,7 +455,7 @@ class RadixEnschedeBot:
 
     def show_tallies(self, chat, split_text, telegram_id):
         message = "=== Tallies ===\n"
-        user = self.db.get_user_by_telegram_id(chat, telegram_id)
+        user = self.db.get_user_by_telegram_id(telegram_id)
         totals = self.db.get_all_tallies(chat, user)
         for key, value in totals.items():
             message += key + ": " + str(value) + "\n"
@@ -498,12 +497,11 @@ class RadixEnschedeBot:
                 return
         else:
             amount = 10
-        user = self.db.get_user_by_telegram_id(chat, telegram_id)
+        user = self.db.get_user_by_telegram_id(telegram_id)
         if not user:
             self.send_message("User not found", chat)
             return
         purchases = self.db.get_last_purchases(chat, amount, user)
-        print(repr(purchases))
         message = "=== History ===\n"
         for purchase in purchases:
             message += "(" + parse(purchase.date).strftime("%m/%d %H:%M") + ") " + str(purchase.amount) + " " + \
@@ -521,7 +519,7 @@ class RadixEnschedeBot:
         if receiver == False:
             self.send_message("Unknown user: " + split_text[1], chat)
             return
-        user = self.db.get_user_by_telegram_id(chat, telegram_id)
+        user = self.db.get_user_by_telegram_id(telegram_id)
         group = self.db.get_chat(chat)
         self.db.add_purchase(Purchase(user, group.products[0], 1, self.db.get_chat(chat)))
         self.db.add_purchase(Purchase(receiver, group.products[0], -1, self.db.get_chat(chat)))
