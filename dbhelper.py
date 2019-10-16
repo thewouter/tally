@@ -30,9 +30,8 @@ class DBHelper:
     def check_chat(self, chat):
         return self.get_chat(chat) is not None
 
-    def get_user_by_telegram_id(self, chat, telegram_id):
-        user = self.session.query(User).filter_by(telegram_id=telegram_id).filter(User.groups.any(telegram_id=chat))\
-            .first()
+    def get_user_by_telegram_id(self, telegram_id):
+        user = self.session.query(User).filter_by(telegram_id=telegram_id).first()
         if user is not None:
             return user
         return False

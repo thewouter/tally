@@ -253,7 +253,9 @@ class RadixEnschedeBot:
         if abs(amount) < 0.5:
             self.send_message("That's a bunch of nothing you have there", chat)
             return
-        user = self.db.get_user_by_telegram_id(chat, telegram_id)
+        user = self.db.get_user_by_telegram_id(telegram_id)
+        if not user.groups.contains(self.db.get_chat(chat)) and make_new_user:
+            user.groups.add(self.db.get_chat(chat))
         if (not make_new_user) & (user == False):
             self.send_message("Unknown user: " + name, chat)
             return
