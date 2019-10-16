@@ -15,7 +15,7 @@ class DBHelper:
     engine = None
 
     def __init__(self, dbname="tally.sqlite"):
-        self.engine = create_engine('sqlite:///' + dbname, echo=True)
+        self.engine = create_engine('sqlite:///' + dbname, echo=False)
         sessionFactory = sessionmaker(bind=self.engine)
         self.session = sessionFactory()
         Base.metadata.create_all(self.engine)
@@ -64,7 +64,7 @@ class DBHelper:
         self.session.commit()
 
     def get_product_by_name(self, chat, name):
-        self.session.query(Product).filter_by(name=name, group_id=chat).first()
+        return self.session.query(Product).filter_by(name=name, group=self.get_chat(chat)).first()
 
     def get_last_purchases(self, chat, amount=10, user=None):
         if user is None:

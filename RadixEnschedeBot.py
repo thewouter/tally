@@ -255,7 +255,7 @@ class RadixEnschedeBot:
             return
         user = self.db.get_user_by_telegram_id(chat, telegram_id)
         if (not make_new_user) & (user == False):
-            self.send_message("Unkown user: " + name, chat)
+            self.send_message("Unknown user: " + name, chat)
             return
         if user is False:
             user = User(name.lower(), telegram_id)
@@ -266,10 +266,11 @@ class RadixEnschedeBot:
             product = self.db.get_chat(chat).products[0]
         else:
             product = self.db.get_product_by_name(chat, split_text[1])
-            if product == False:
+            if product is None:
                 self.send_message("Unknown product: " + split_text[1], chat)
                 return
         purchase = Purchase(user, product, amount, self.db.get_chat(chat))
+        print(repr(purchase))
         # Get old score and new score
         all_tallies = self.db.get_all_tallies(chat, user)
         if product.name in all_tallies.keys():
@@ -288,7 +289,7 @@ class RadixEnschedeBot:
                                                                                                       new_score,
                                                                                                       product.name)
             # Every fourth product or tally of at least 4 products, remind the user personally
-            if (new_score % 4 == 0):
+            if new_score % 4 == 0:
                 self.snark(user, new_score, product)
             elif amount >= 4:
                 self.snark(user, new_score, product)
@@ -536,7 +537,7 @@ class RadixEnschedeBot:
         f.close()
 
     def test(self):
-        msg = "/history 10"
+        msg = "1 krat"
         self.handle_message(-294368505, msg, self.ADMIN, "wouter", "group")
 
 
