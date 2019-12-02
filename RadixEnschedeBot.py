@@ -529,10 +529,11 @@ class RadixEnschedeBot:
         self.send_message(message, chat)
 
     def update_tally(self, chat, split_text, telegram_id):
+        print("test")
         if telegram_id != self.ADMIN:
             self.send_message("🖕🖕🖕🖕🖕🖕", chat)
             return
-        f = open(os.getcwd() + "/" + "update_tally", "w+")
+        f = open(os.path.dirname(os.path.abspath(__file__)) + "/" + "update_tally", "w+")
         self.send_message("I will update shortly..", chat)
         f.close()
 
