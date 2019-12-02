@@ -254,8 +254,6 @@ class RadixEnschedeBot:
             self.send_message("That's a bunch of nothing you have there", chat)
             return
         user = self.db.get_user_by_telegram_id(telegram_id)
-        if self.db.get_chat(chat) not in user.groups and make_new_user:
-            user.groups.append(self.db.get_chat(chat))
         if (not make_new_user) & (user == False):
             self.send_message("Unknown user: " + name, chat)
             return
@@ -263,6 +261,8 @@ class RadixEnschedeBot:
             user = User(name.lower(), telegram_id)
             user.groups.append(self.db.get_chat(chat))
             self.db.add_user(user)
+        if self.db.get_chat(chat) not in user.groups and make_new_user:
+            user.groups.append(self.db.get_chat(chat))
         user = self.db.get_user_by_telegram_id(telegram_id)
         if len(split_text) < 2:
             product = self.db.get_chat(chat).products[0]
