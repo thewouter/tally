@@ -140,16 +140,17 @@ class RadixEnschedeBot:
                         self.extract_messages(updates)
             except ConnectionError as e:
                 continue
-
-            jsonFile = Path('post.json')
+            json_path = os.path.dirname(os.path.abspath(__file__)) + '/post.json';
+            jsonFile = Path(json_path)
+            print(jsonFile.is_file())
             if jsonFile.is_file():
-                with open('post.json', 'r') as f:
+                with open(json_path, 'r') as f:
                     data = f.read().replace('\n', '')
                     for tallyPost in self.decode_stacked(data):
                         x = tallyPost["amount"] + " " + tallyPost["product"]
                         self.handle_message(tallyPost["group"], x, tallyPost["user"], "", 'group')
                     f.close()
-                os.remove('post.json')
+                os.remove(json_path)
 
     def decode_stacked(self, document, pos=0, decoder=json.JSONDecoder()):
         while True:
@@ -529,7 +530,6 @@ class RadixEnschedeBot:
         self.send_message(message, chat)
 
     def update_tally(self, chat, split_text, telegram_id):
-        print("test")
         if telegram_id != self.ADMIN:
             self.send_message("🖕🖕🖕🖕🖕🖕", chat)
             return
@@ -538,8 +538,15 @@ class RadixEnschedeBot:
         f.close()
 
     def test(self):
-        msg = "1 krat"
-        self.handle_message(-294368505, msg, self.ADMIN, "wouter", "group")
+        jsonFile = Path('post.json')
+        if jsonFile.is_file():
+            with open('post.json', 'r') as f:
+                data = f.read().replace('\n', '')
+                for tallyPost in self.decode_stacked(data):
+                    x = tallyPost["amount"] + " " + tallyPost["product"]
+                    self.handle_message(tallyPost["group"], x, tallyPost["user"], "", 'group')
+                f.close()
+            os.remove('post.json')
 
 
 if __name__ == '__main__':
