@@ -225,7 +225,7 @@ class RadixEnschedeBot:
 
         nsp = NumericStringParser()
         try:
-            int(nsp.eval(split_text[0]))
+            int(nsp.eval(split_text[0]).real)
             self.tally(split_text, chat, telegram_id, name)
             return
         except Exception as e:
@@ -236,7 +236,7 @@ class RadixEnschedeBot:
         if user != False:
             del split_text[0]
             try:
-                int(nsp.eval(split_text[0]))
+                int(nsp.eval(split_text[0]).real)
                 self.tally(split_text, chat, user.telegram_id, split_text[0], False)
                 return
             except Exception:
@@ -247,7 +247,8 @@ class RadixEnschedeBot:
 
     def tally(self, split_text, chat, telegram_id, name, make_new_user=True):
         nsp = NumericStringParser()
-        amount = int(nsp.eval(split_text[0]))
+        # We only drink an integer amount of real beer
+        amount = int(nsp.eval(split_text[0]).real)
         if abs(amount) > 99:
             self.send_message("Tally between -100 and 100, " + str(amount) + " given", chat)
             return

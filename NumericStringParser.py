@@ -1,6 +1,6 @@
 from __future__ import division
 
-import math
+import cmath
 import operator
 from filecmp import cmp
 
@@ -38,7 +38,7 @@ class NumericStringParser(object):
         multop  :: '*' | '/'
         addop   :: '+' | '-'
         integer :: ['+' | '-'] '0'..'9'+
-        atom    :: PI | E | Q | real | fn '(' expr ')' | '(' expr ')'
+        atom    :: PI | E | Q | I | real | fn '(' expr ')' | '(' expr ')'
         factor  :: atom [ expop factor ]*
         term    :: factor [ multop factor ]*
         expr    :: term [ addop term ]*
@@ -46,6 +46,7 @@ class NumericStringParser(object):
         point = Literal(".")
         e = CaselessLiteral("E")
         q = CaselessLiteral("Q")
+        i = CaselessLiteral("I")
         fnumber = Combine(Word("+-" + nums, nums) +
                           Optional(point + Optional(Word(nums))) +
                           Optional(e + Word("+-" + nums, nums)))
@@ -62,7 +63,7 @@ class NumericStringParser(object):
         pi = CaselessLiteral("PI")
         expr = Forward()
         atom = ((Optional(oneOf("- +")) +
-                 (ident + lpar + expr + rpar | pi | e | q | fnumber).setParseAction(self.pushFirst))
+                 (ident + lpar + expr + rpar | pi | e | q | i | fnumber).setParseAction(self.pushFirst))
                 | Optional(oneOf("- +")) + Group(lpar + expr + rpar)
                 ).setParseAction(self.pushUMinus)
         # by defining exponentiation as "atom [ ^ factor ]..." instead of
@@ -86,10 +87,10 @@ class NumericStringParser(object):
                     "*": operator.mul,
                     "/": operator.truediv,
                     "^": operator.pow}
-        self.fn = {"sin": math.sin,
-                   "cos": math.cos,
-                   "tan": math.tan,
-                   "exp": math.exp,
+        self.fn = {"sin": cmath.sin,
+                   "cos": cmath.cos,
+                   "tan": cmath.tan,
+                   "exp": cmath.exp,
                    "abs": abs,
                    "trunc": lambda a: int(a),
                    "round": round,
@@ -104,11 +105,13 @@ class NumericStringParser(object):
             op1 = self.evaluateStack(s)
             return self.opn[op](op1, op2)
         elif op == "PI":
-            return math.pi
+            return cmath.pi
         elif op == "E":
-            return math.e
+            return cmath.e
         elif op == "Q":
             return 1
+        elif op == "I":
+            return complex(0, 1)
         elif op in self.fn:
             return self.fn[op](self.evaluateStack(s))
         elif op[0].isalpha():
