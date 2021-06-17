@@ -6,6 +6,8 @@ import re
 import sys
 import traceback
 import urllib
+import daemon
+
 from pathlib import Path
 from random import randrange as randint
 
@@ -17,7 +19,7 @@ from NumericStringParser import NumericStringParser
 from Product import Product
 from Purchase import Purchase
 from User import User
-from daemon import runner
+#from daemon import runner
 from dbhelper import DBHelper
 
 
@@ -556,5 +558,7 @@ if __name__ == '__main__':
         tally.test()
 
         exit()
-    daemon_runner = runner.DaemonRunner(tally)
-    daemon_runner.do_action()
+    with daemon.DaemonContext():
+        tally.run()
+#    daemon_runner = runner.DaemonRunner(tally)
+#    daemon_runner.do_action()
